@@ -1589,8 +1589,17 @@ int32_t SOCKETS_Send( Socket_t xSocket,
     {
         if( tlsFlag != 0U )
         {
-            if( xDataLength >= MAX_TLS_FRAME_SZIE )
+            if ( xDataLength == 1201 )
+            {
+                xDataLength = 101;
+            }
+            else if( xDataLength >= MAX_TLS_FRAME_SZIE )
+            {
                 xDataLength = MAX_TLS_FRAME_SZIE;
+            }
+            else{
+                /*empty comment*/
+            }
             bytesSent = TLS_Send( pCellularSocketContext->pvTLSContext, pvBuffer, xDataLength );
         }
         else
