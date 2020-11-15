@@ -210,26 +210,32 @@ static int32_t prvCheckSetSockOptParams( Socket_t xSocket,
     static char _dnsCache[ GETHOSTBYNAME_CACHE_SIZE ][ CELLULAR_IP_ADDRESS_MAX_SIZE + 1 ];
 #endif /* if ( CELLULAR_SUPPORT_GETHOSTBYNAME == 0 ) */
 
-void RX_BUF_PUSH( _cellularSecureSocket_t * pCellularSocketContext, uint8_t d )
+static void prvAppendToReceiveBuffer( _cellularSecureSocket_t * pCellularSocketContext, uint32_t length, uint8_t * inputBuffer )
 {
-    rx_buf[ pCellularSocketContext->rx_buff_id ][ pCellularSocketContext->rx_buf_widx++ ] = d;
-    if (pCellularSocketContext->rx_buf_widx == RX_BUF_SIZE) {
-        pCellularSocketContext->rx_buf_widx = 0;
+    uint32_t index = 0;
+    for( index = 0; index < length; index++ )
+    {    
+        rx_buf[ pCellularSocketContext->rx_buff_id ][ pCellularSocketContext->rx_buf_widx++ ] = inputBuffer[ index ];
+        if (pCellularSocketContext->rx_buf_widx == RX_BUF_SIZE) {
+            pCellularSocketContext->rx_buf_widx = 0;
+        }
     }
 }
 
-uint8_t RX_BUF_POP( _cellularSecureSocket_t * pCellularSocketContext)
+static void prvExtractFromReceiveBuffer( _cellularSecureSocket_t * pCellularSocketContext, uint32_t length, uint8_t * outputBuffer )
 {
-    uint8_t d = rx_buf[ pCellularSocketContext->rx_buff_id ][(pCellularSocketContext->rx_buf_ridx++)];
+    uint32_t index = 0;
+    for( index = 0; index < length; index++ )
+    {    
+        outputBuffer[ index ] = rx_buf[ pCellularSocketContext->rx_buff_id ][ pCellularSocketContext->rx_buf_ridx++ ];
 
-    if (pCellularSocketContext->rx_buf_ridx == RX_BUF_SIZE) {
-        pCellularSocketContext->rx_buf_ridx = 0;
+        if (pCellularSocketContext->rx_buf_ridx == RX_BUF_SIZE) {
+            pCellularSocketContext->rx_buf_ridx = 0;
+        }
     }
-
-    return d;
 }
 
-uint16_t RX_BUF_COUNT( _cellularSecureSocket_t * pCellularSocketContext)
+static uint16_t prvGetReceiveBufferCount( _cellularSecureSocket_t * pCellularSocketContext)
 {
     if (pCellularSocketContext->rx_buf_widx >= pCellularSocketContext->rx_buf_ridx) {
         return (pCellularSocketContext->rx_buf_widx - pCellularSocketContext->rx_buf_ridx);
@@ -237,6 +243,7 @@ uint16_t RX_BUF_COUNT( _cellularSecureSocket_t * pCellularSocketContext)
         return (RX_BUF_SIZE + pCellularSocketContext->rx_buf_widx - pCellularSocketContext->rx_buf_ridx);
     }
 }
+
 
 
 /*-----------------------------------------------------------*/
@@ -447,43 +454,26 @@ static BaseType_t prvNetworkRecv( void * ctx,
                      pCellularSocketContext, pCellularSocketContext->ulFlags );
         retRecvLength = SOCKETS_ENOTCONN;
     }
-else if ( tlsFlag != 0 && pCellularSocketContext->isConntected == false )
+#ifdef SOCKETS_RX_BEST_EFFORT
+    else if ( pCellularSocketContext->isConntected == true )
     {
-        retRecvLength = prvNetworkRecvCellular( pCellularSocketContext, buf, len );
-    }
-    else
-    {
-        if( RX_BUF_COUNT(pCellularSocketContext) >= len )
+        if( prvGetReceiveBufferCount( pCellularSocketContext ) >= len )
         {
-            //configPRINTF(("RX_BUF_COUNT() %d > len %d\n", RX_BUF_COUNT(), len ));
-            for( index = 0; index < len; index++ )
-            {
-                buf[ index ] = RX_BUF_POP( pCellularSocketContext );
-            }
+            prvExtractFromReceiveBuffer( pCellularSocketContext, len, &buf[ 0 ] );
             retRecvLength = len;
         }
         else
         {
-            //configPRINTF(("RX_BUF_COUNT() %d > len %d\n", RX_BUF_COUNT(), len ));
             tmpRecvLength = prvNetworkRecvCellular( pCellularSocketContext, &tmp_rx_buf[ 0 ], RX_BUF_SIZE_HALF );
             if( tmpRecvLength <= 0 )
             {
-                retRecvLength = tmpRecvLength;
-                //configPRINTF(("tmpRecvLength %d, len %d received fail\n", tmpRecvLength, len ));
+                retRecvLength = tmpRecvLength;            
             }
             else
             {
-                uint8_t temp = 0;
-                //configPRINTF(("tmpRecvLength %d > len %d\n", tmpRecvLength, len ));
-                if( RX_BUF_COUNT(pCellularSocketContext) == 0 )
+                if( prvGetReceiveBufferCount( pCellularSocketContext ) == 0 )
                 {
-                    for( index = 0; index < tmpRecvLength; index++ )
-                    {
-                        //configPRINTF(("push temp %d \n", tmp_rx_buf[ index ] ));
-                        RX_BUF_PUSH( pCellularSocketContext,tmp_rx_buf[ index ] );
-
-                    }
-                    //configPRINTF(("tmp_rx_buf[ 0 ] %d \n", tmp_rx_buf[ 0 ] ));
+                    prvAppendToReceiveBuffer( pCellularSocketContext, tmpRecvLength, &tmp_rx_buf[ 0 ] );
                     if( tmpRecvLength >= len )
                     {
                         retRecvLength = len;
@@ -492,62 +482,34 @@ else if ( tlsFlag != 0 && pCellularSocketContext->isConntected == false )
                     {
                         retRecvLength = tmpRecvLength;
                     }
-                    
-                    for( index = 0; index < retRecvLength; index++ )
-                    {
-                        buf[ index ] = RX_BUF_POP(pCellularSocketContext );
-                    }
-                    //configPRINTF(("buf[ 0 ] %d \n", buf[ 0 ] ));
-                    //configPRINTF(("tmpRecvLength %d > len %d, retRecvLength %d\n", tmpRecvLength, len, retRecvLength));
+                    prvExtractFromReceiveBuffer( pCellularSocketContext, retRecvLength, &buf[ 0 ] );
                 }
                 else
                 {
-                    if( tmpRecvLength + RX_BUF_COUNT(pCellularSocketContext) < len )
+                    retRecvLength = prvGetReceiveBufferCount( pCellularSocketContext );
+                    prvExtractFromReceiveBuffer( pCellularSocketContext, retRecvLength, &buf[ 0 ] );
+                    if( tmpRecvLength + prvGetReceiveBufferCount( pCellularSocketContext ) < len )
                     {
-                        //configPRINTF(("tmpRecvLength %d + RX_BUF_COUNT() %d < len %d\n", tmpRecvLength, RX_BUF_COUNT(), len));
-                        retRecvLength = tmpRecvLength + RX_BUF_COUNT(pCellularSocketContext);
-                        for( index = 0; index < RX_BUF_COUNT(pCellularSocketContext); index++ )
-                        {
-                            buf[ index ] = RX_BUF_POP( pCellularSocketContext );
-                        }
-                        memcpy( &buf[ index ], &tmp_rx_buf[ 0 ], tmpRecvLength );
+                        memcpy( &buf[ retRecvLength ], &tmp_rx_buf[ 0 ], tmpRecvLength );
+                        retRecvLength += tmpRecvLength;
                     }
-                    /* RX_BUF_COUNT() < len, tmpRecvLength + RX_BUF_COUNT() > len but  */
                     else
                     {
-//                        configPRINTF(("RX_BUF_COUNT() %d < len %d,  tmpRecvLength %d + RX_BUF_COUNT() %d > len %d\n",
-//                            RX_BUF_COUNT(),
-//                            len,
-//                            tmpRecvLength,
-//                            RX_BUF_COUNT(),
-//                            len));
-                        remainLength = len - RX_BUF_COUNT(pCellularSocketContext);
-                        for( index = 0; index < RX_BUF_COUNT(pCellularSocketContext); index++ )
-                        {
-                            buf[ index ] = RX_BUF_POP( pCellularSocketContext );
-                        }
-                        currentIndex = index;
-
-                        for( index = 0; index < tmpRecvLength; index++ )
-                        {
-                            RX_BUF_PUSH( pCellularSocketContext,tmp_rx_buf[ index ] );
-                        }
-                        for( index = 0; index < remainLength; index++ )
-                        {
-                            buf[ currentIndex ] = RX_BUF_POP( pCellularSocketContext );
-                        }
-                        retRecvLength = len;
+                        remainLength = len - retRecvLength;
+                        prvAppendToReceiveBuffer( pCellularSocketContext, tmpRecvLength, &tmp_rx_buf[ 0 ] );
+                        prvExtractFromReceiveBuffer( pCellularSocketContext, retRecvLength, &buf[ retRecvLength ] );
+                        retRecvLength += remainLength;
                     }
                 }
             }
         }
     }
-#if 0
+#endif
     else
     {
         retRecvLength = prvNetworkRecvCellular( pCellularSocketContext, buf, len );
     }
-#endif
+
     return retRecvLength;
 }
 
@@ -1589,11 +1551,7 @@ int32_t SOCKETS_Send( Socket_t xSocket,
     {
         if( tlsFlag != 0U )
         {
-            if ( xDataLength == 1201 )
-            {
-                xDataLength = 101;
-            }
-            else if( xDataLength >= MAX_TLS_FRAME_SZIE )
+            if( xDataLength >= MAX_TLS_FRAME_SZIE )
             {
                 xDataLength = MAX_TLS_FRAME_SZIE;
             }
