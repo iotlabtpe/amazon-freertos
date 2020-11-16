@@ -66,5 +66,6 @@
 #define MBEDTLS_SSL_MAX_CONTENT_LEN             ( 1024 ) /**< Maximum fragment length in bytes, determines the size of each of the two internal I/O buffers. */      
                  
 #define MAX_TLS_FRAME_SZIE 3000
+#define SOCKETS_RX_BEST_EFFORT 	0
 
 #endif /* ifndef IOT_CONFIG_H_ */
