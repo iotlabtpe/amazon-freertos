@@ -1,0 +1,17 @@
+number of segment :6
+0x8105a00
+0x8180190
+0x8181058
+0x8181060
+0x8181060
+number of segment :6
+0x80001c0
+0x801a47c
+0x801c2a8
+0x802dc58
+0x802ddc8
+Merging
+SBSFU Base = 0x8000000
+Writing header = 0x8105000
+APPLI Base = 0x8105800
+Writing to ./SBSFU_B-L4S5I-IOT01_aws_tests.bin 1577056

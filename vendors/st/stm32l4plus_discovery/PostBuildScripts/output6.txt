@@ -1,0 +1,6 @@
+      -------------------------------------------------------------------
+                       STM32CubeProgrammer v2.5.0                  
+      -------------------------------------------------------------------
+
+Warning: The ELF file will be overwritten
+ELF file modified succesfully
