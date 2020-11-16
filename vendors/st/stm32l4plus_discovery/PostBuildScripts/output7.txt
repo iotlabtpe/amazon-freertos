@@ -1,5 +1,0 @@
-processing: ./B-L4S5I-IOT01_2_Images_SBSFU/Debug/SBSFU.elf
-sbsfu entry point is: 0x8020b29
-processing: B-L4S5I-IOT01_aws_tests.elf
-initial appli entry point is: 0x8107651
-changing appli entry point to: 0x8020b29

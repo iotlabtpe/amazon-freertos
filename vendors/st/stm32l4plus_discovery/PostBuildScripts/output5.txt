@@ -1,1 +1,0 @@
-Generating the global elf file (SBSFU and userApp)
