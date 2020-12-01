@@ -31,16 +31,6 @@
 #ifndef _AWS_MQTT_CONFIG_H_
 #define _AWS_MQTT_CONFIG_H_
 
-#ifdef AMAZON_FREERTOS_ENABLE_UNIT_TESTS
-/* Unity includes. */
-#include "unity_internals.h"
-
-/**
- * @brief Define assert for test project.
- */
-#define mqttconfigASSERT( x )    if( ( x ) == 0 ) TEST_ABORT()
-#endif /* AMAZON_FREERTOS_ENABLE_UNIT_TESTS */
-
 /**
  * @brief Enable subscription management.
  *

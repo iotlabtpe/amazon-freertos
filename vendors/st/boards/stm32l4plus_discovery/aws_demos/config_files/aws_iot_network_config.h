@@ -42,9 +42,9 @@
  * each network types supported. Flags for all supported network types can be found
  * in "aws_iot_network.h"
  */
-//#define configSUPPORTED_NETWORKS    ( AWSIOT_NETWORK_TYPE_WIFI | AWSIOT_NETWORK_TYPE_CELLULAR )
+#define configSUPPORTED_NETWORKS    ( AWSIOT_NETWORK_TYPE_ETH )
 
-#define configSUPPORTED_NETWORKS    ( AWSIOT_NETWORK_TYPE_CELLULAR )
+//#define configSUPPORTED_NETWORKS    ( AWSIOT_NETWORK_TYPE_CELLULAR )
 /**
  * @brief Configuration flag which is used to enable one or more network interfaces for a board.
  *
@@ -55,8 +55,8 @@
  *
  */
 
-//#define configENABLED_NETWORKS    ( AWSIOT_NETWORK_TYPE_WIFI | AWSIOT_NETWORK_TYPE_CELLULAR)
+#define configENABLED_NETWORKS    ( AWSIOT_NETWORK_TYPE_ETH )
 
-#define configENABLED_NETWORKS    ( AWSIOT_NETWORK_TYPE_CELLULAR)
+//#define configENABLED_NETWORKS    ( AWSIOT_NETWORK_TYPE_CELLULAR)
 
 #endif /* CONFIG_FILES_AWS_IOT_NETWORK_CONFIG_H_ */

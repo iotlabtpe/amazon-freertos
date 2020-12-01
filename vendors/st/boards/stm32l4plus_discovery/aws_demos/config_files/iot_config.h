@@ -55,9 +55,16 @@
 
 /* Platform thread stack size and priority. */
 #define IOT_THREAD_DEFAULT_STACK_SIZE    500  /* at least for aws_tests. Otherwise, 1500? */
-#define IOT_THREAD_DEFAULT_PRIORITY      5
+#define IOT_THREAD_DEFAULT_PRIORITY      tskIDLE_PRIORITY
 
 /* Include the common configuration file for FreeRTOS. */
 #include "iot_config_common.h"
 
+#if defined(MBEDTLS_SSL_MAX_CONTENT_LEN)                                                                                                                                 
+#undef MBEDTLS_SSL_MAX_CONTENT_LEN                                                                                                                                       
+#endif                                                                                                                                                                   
+#define MBEDTLS_SSL_MAX_CONTENT_LEN             ( 1024 ) /**< Maximum fragment length in bytes, determines the size of each of the two internal I/O buffers. */      
+                 
+#define MAX_TLS_FRAME_SZIE 3000
+#define SOCKETS_RX_BEST_EFFORT 	0
 #endif /* ifndef IOT_CONFIG_H_ */

@@ -52,7 +52,7 @@
 #include "iot_logging_task.h"
 #include "iot_wifi.h"
 #include "aws_clientcredential.h"
-//#include "aws_customdemo_runner.h"
+
 /* WiFi driver includes. */
 #include "es_wifi_io.h"
 #include "es_wifi.h"
@@ -98,6 +98,7 @@ extern WIFIReturnCode_t WIFI_GetFirmwareVersion( uint8_t * pucBuffer );
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
+#define mainTEST_RUNNER_TASK_STACK_SIZE                 ( 2350 )
 
 /* USER CODE END PM */
 
@@ -153,6 +154,8 @@ void vApplicationDaemonTaskStartupHook( void );
 void Led_SetState(bool on);
 void Led_Blink(int period, int duty, int count);
 
+/* Setup cellular connection. */
+extern bool setupCellular( void );
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -165,6 +168,18 @@ void Led_Blink(int period, int duty, int count);
   * @retval int
   */
   int ret = 0;
+/*-----------------------------------------------------------*/
+
+static void demoRunnerTask( void * pvParameters )
+{
+    bool retCellular = false;
+    /* Connect to the cellular network before running the demos. */
+    retCellular = setupCellular();
+    configPRINTF(("retCellular %d\n", retCellular ));
+    DEMO_RUNNER_RunDemos();
+    vTaskDelete( NULL );
+}
+
 int main(void)
 {
 
@@ -593,6 +608,47 @@ void vMainUARTPrintString( char * pcString )
                        ulTimeout );
 }
 
+#if (defined(__GNUC__) && !defined(__CC_ARM))
+#define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
+#define GETCHAR_PROTOTYPE int __io_getchar(void)
+#else
+#define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
+#define GETCHAR_PROTOTYPE int fgetc(FILE *f)
+#endif /* __GNUC__ */
+
+/**
+  * @brief  Retargets the C library printf function to the USART.
+  * @param  None
+  * @retval None
+  */
+PUTCHAR_PROTOTYPE
+{
+  /* Place your implementation of fputc here */
+  /* e.g. write a character to the USART and Loop until the end of transmission */
+  while (HAL_OK != HAL_UART_Transmit(&huart1, (uint8_t *) &ch, 1, 30000))
+  {
+    ;
+  }
+  return ch;
+
+}
+
+/**
+  * @brief  Retargets the C library scanf function to the USART.
+  * @param  None
+  * @retval None
+  */
+GETCHAR_PROTOTYPE
+{
+  /* Place your implementation of fgetc here */
+  /* e.g. read a character on USART and loop until the end of read */
+  uint8_t ch = 0;
+  while (HAL_OK != HAL_UART_Receive(&huart1, (uint8_t *)&ch, 1, 30000))
+  {
+    ;
+  }
+  return ch;
+}
 void vApplicationDaemonTaskStartupHook( void )
 {
     WIFIReturnCode_t xWifiStatus = eWiFiSuccess;
@@ -618,7 +674,13 @@ void vApplicationDaemonTaskStartupHook( void )
         {
             /* Connect to the WiFi before running the demos */
             //prvWifiConnect();
-            DEMO_RUNNER_RunDemos();
+
+            xTaskCreate( demoRunnerTask,
+                         "demoRunnerTask",
+                         mainTEST_RUNNER_TASK_STACK_SIZE,
+                         NULL,
+                         tskIDLE_PRIORITY,
+                         NULL );
         }
     }
     else

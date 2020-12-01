@@ -49,7 +49,7 @@
 #define democonfigDEMO_PRIORITY                           ( tskIDLE_PRIORITY + 5 )
 //#define democonfigNETWORK_TYPES                           ( AWSIOT_NETWORK_TYPE_WIFI )
 
-#define democonfigNETWORK_TYPES ( AWSIOT_NETWORK_TYPE_CELLULAR )
+#define democonfigNETWORK_TYPES 						  ( AWSIOT_NETWORK_TYPE_ETH )
 
 
 #define democonfigSHADOW_DEMO_NUM_TASKS                   ( 2 )

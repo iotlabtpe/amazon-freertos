@@ -163,7 +163,7 @@ target_link_libraries(
     AFR::secure_sockets::mcu_port
     INTERFACE
         AFR::tls
-        AFR::wifi
+        AFR::cellular
         AFR::platform
 )
 target_sources(
@@ -207,7 +207,7 @@ if(AFR_ENABLE_DEMOS OR AFR_ENABLE_TESTS)
         ${board_code_src}
         ${config_files}
         "${board_dir}/application_code/main.c"
-        "$<${AFR_IS_TESTING}:${board_dir}/application_code/cellular_setup.c>"
+        "${board_dir}/application_code/cellular_setup.c"
     )
     target_link_libraries(
         ${exe_target}
